@@ -1,0 +1,110 @@
+appName: cicd-demo
+namespace: prod-app
+
+# k8s replicaset's pod count
+replicaCount: 3
+revisionHistoryLimit: 5
+
+appPort: 8080
+
+image:
+  repository: docker.io/hbleejoy/cicd-demo
+  pullPolicy: Always
+  ## Overrides the image tag whose default is the chart appVersion. ##
+  tag: prod
+
+initContainers: []
+
+imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+
+ingress:
+  enabled: true
+  className: "nginx" # k8s version >= 1.18
+  annotations: []
+  hosts:
+    - host: cicd-demo.example.com
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+          backend:
+            port: 80
+
+  tls:
+    - secretName: wildcard-example-com-tls
+      hosts:
+      - cicd-demo.example.com
+
+resources:
+  requests:
+    cpu: 1000m
+    memory: 1024Mi
+
+containerEnvs:
+  - name: SPRING_PROFILES_ACTIVE # spring profile (important!!)
+    value: prod
+  - name: JAVA_TOOL_OPTIONS
+    value: >
+      -Xmx1024m 
+      -Xms1024m 
+      -Dfile.encoding=UTF-8 
+      -Duser.timezone=Asia/Seoul
+
+# terminationGracePeriodSeconds
+gracefulShutdownPeriodSeconds: 60
+
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: 8080
+  initialDelaySeconds: 100
+  periodSeconds: 1
+  failureThreshold: 7
+# apply to endpointslice 
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: 8080
+  initialDelaySeconds: 100
+  periodSeconds: 1
+  successThreshold: 1
+  failureThreshold: 3
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Setting security context on container
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65534  # nobody
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+
+nodeSelector: {}
+
+tolerations: []
+
+# apply affinity with node role
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node-role.kubernetes.io/worker
+              operator: Exists
+
+# pods spread equally
+topologySpreadConstraints: []
