@@ -11,7 +11,7 @@ image:
   repository: docker.io/hbleejoy/cicd-demo
   pullPolicy: Always
   ## Overrides the image tag whose default is the chart appVersion. ##
-  tag: main
+  tag: v2025.01-APP
 
 initContainers: []
 
